@@ -4,30 +4,26 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice
 
-TOKEN = "ВСТАВЬ_СЮДА_ТОКЕН_ОТ_BOTFATHER"
+TOKEN = "9034314106:AAGJyzP6u84yqQYucJ9vL5pithsYYjHw2jA"
 ADMIN_ID = 123456789  # ВСТАВЬ СЮДА СВОЙ ID
 SBER_CARD = "2202 1234 5678 9012"  # ТВОЯ КАРТА СБЕРБАНК
 SBER_NAME = "ИВАН И."  # ИМЯ НА КАРТЕ
 
 bot = telebot.TeleBot(TOKEN)
 
-# ===== УРОВНИ АДМИНКИ КАК В BLACK RUSSIA =====
-# price_stars - от 30 ⭐, price_rub - рублями
+# ===== УРОВНИ АДМИНКИ NEXT RUSSIA - 7 УРОВНЕЙ =====
 LEVELS = [
-    {"id": "helper", "name": "Хелпер", "lvl": "1 LVL", "stars": 30, "rub": 69, "desc": "Кик, мут, помощь игрокам"},
-    {"id": "admin1", "name": "Администратор", "lvl": "2 LVL", "stars": 70, "rub": 149, "desc": "Кик, мут, бан, тюрьма"},
-    {"id": "admin2", "name": "Старший Администратор", "lvl": "3 LVL", "stars": 150, "rub": 299, "desc": "Бан, разбан, выдача скинов"},
-    {"id": "admin3", "name": "Главный Администратор", "lvl": "4 LVL", "stars": 300, "rub": 599, "desc": "Всё + слежка, лидерки"},
-    {"id": "owner", "name": "Основатель", "lvl": "5 LVL", "stars": 600, "rub": 1199, "desc": "Всё + выдача админок, экономика"},
+    {"id": "junior", "name": "Младший модератор", "lvl": "1 LVL", "stars": 30, "rub": 69, "desc": "Кик, мут, помощь игрокам, слежка за чатом"},
+    {"id": "moderator", "name": "Модератор", "lvl": "2 LVL", "stars": 70, "rub": 149, "desc": "Кик, мут, бан, тюрьма, проверка жалоб"},
+    {"id": "admin", "name": "Администратор", "lvl": "3 LVL", "stars": 150, "rub": 299, "desc": "Бан, разбан, выдача скинов, ивенты"},
+    {"id": "senior", "name": "Старший администратор", "lvl": "4 LVL", "stars": 300, "rub": 599, "desc": "Всё + слежка, лидерки, контроль модеров"},
+    {"id": "zga", "name": "Заместитель главного администратора (ЗГА) / Куратор", "lvl": "5 LVL", "stars": 500, "rub": 999, "desc": "Куратор состава, снятие / выдача варнов, контроль админов"},
+    {"id": "ga", "name": "Главный администратор (ГА)", "lvl": "6 LVL", "stars": 800, "rub": 1499, "desc": "Всё + набор в команду, экономика, решения по банам"},
+    {"id": "founder", "name": "Специальный администратор / Основатель проекта", "lvl": "7 LVL", "stars": 1200, "rub": 2499, "desc": "Всё + выдача админок, полный доступ, основатель"},
 ]
 
-BANKS = {
-    "nickel": {"name": "NICKEL", "emoji": "🟣", "desc": "Игровой банк NEXT RUSSIA\nПроцент: 5% в день\nЛимит: 1.000.000 ₽"},
-    "sber": {"name": "СберБанк", "emoji": "🟢", "desc": "Настоящий банк для доната\nОплата рублями на карту\nПодтверждение чеком"},
-}
-
-users = {}  # user_id -> {balance, level, bank}
-pending_rub = {}  # user_id -> level_id
+users = {}
+pending_rub = {}
 
 def get_user(uid):
     if uid not in users:
@@ -119,7 +115,7 @@ def rules(c):
 
 @bot.callback_query_handler(func=lambda c: c.data == "levels")
 def levels(c):
-    text = "📊 <b>УРОВНИ АДМИНКИ - КАК В BLACK RUSSIA</b>\n\n"
+    text = "📊 <b>УРОВНИ АДМИНКИ - 7 УРОВНЕЙ</b>\n\n"
     kb = InlineKeyboardMarkup(row_width=1)
     for lvl in LEVELS:
         text += f"<b>{lvl['name']} - {lvl['lvl']}</b>\n{lvl['desc']}\n⭐ {lvl['stars']} звёзд / 💳 {lvl['rub']} ₽\n\n"
@@ -168,13 +164,12 @@ def pay_stars(c):
     lvl = next((x for x in LEVELS if x["id"] == lid), None)
     if not lvl:
         return
-    # Оплата звёздами - Telegram Stars, валюта XTR, автоматически
     bot.send_invoice(
         c.message.chat.id,
         title=f"NEXT RUSSIA - {lvl['name']}",
         description=f"Админка {lvl['name']} {lvl['lvl']} в NEXT RUSSIA. {lvl['desc']}",
         invoice_payload=f"admin_{lid}_{c.from_user.id}",
-        provider_token="",  # Для звёзд токен не нужен
+        provider_token="",
         currency="XTR",
         prices=[LabeledPrice(f"{lvl['name']}", lvl["stars"])],
     )
@@ -187,11 +182,10 @@ def checkout(q):
 @bot.message_handler(content_types=['successful_payment'])
 def success_pay(m):
     payload = m.successful_payment.invoice_payload
-    # payload: admin_helper_123456
     try:
         lid = payload.split("_")[1]
     except:
-        lid = "helper"
+        lid = "junior"
     lvl = next((x for x in LEVELS if x["id"] == lid), LEVELS[0])
     u = get_user(m.from_user.id)
     u["level"] = f"{lvl['name']} {lvl['lvl']}"
@@ -201,7 +195,6 @@ def success_pay(m):
         f"📋 {lvl['desc']}\n\n"
         f"Добро пожаловать в команду NEXT RUSSIA!",
         parse_mode="HTML", reply_markup=main_menu())
-    # Уведомление тебе как владельцу
     try:
         bot.send_message(ADMIN_ID, f"💰 НОВАЯ ПОКУПКА!\n@{m.from_user.username} ({m.from_user.id})\nКупил: {lvl['name']} за {lvl['stars']} ⭐")
     except:
@@ -245,7 +238,6 @@ def photo_check(m):
     lid = pending_rub[m.from_user.id]
     lvl = next((x for x in LEVELS if x["id"] == lid), LEVELS[0])
     bot.send_message(m.chat.id, "✅ Чек отправлен на проверку! Жди, админ выдаст админку в течение 10-30 минут.")
-    # Тебе приходит чек
     try:
         bot.forward_message(ADMIN_ID, m.chat.id, m.message_id)
         bot.send_message(ADMIN_ID,
@@ -268,7 +260,7 @@ def give_admin(m):
         uid = int(uid)
         lvl = next((x for x in LEVELS if x["id"] == lid), None)
         if not lvl:
-            bot.send_message(m.chat.id, "Нет такого уровня. helper / admin1 / admin2 / admin3 / owner")
+            bot.send_message(m.chat.id, "Нет такого уровня. junior / moderator / admin / senior / zga / ga / founder")
             return
         u = get_user(uid)
         u["level"] = f"{lvl['name']} {lvl['lvl']}"
@@ -281,7 +273,7 @@ def give_admin(m):
             f"💳 Оплата рублями подтверждена.",
             parse_mode="HTML", reply_markup=main_menu())
     except Exception as e:
-        bot.send_message(m.chat.id, f"Используй так: /give 123456 helper\nОшибка: {e}")
+        bot.send_message(m.chat.id, f"Используй так: /give 123456 junior\nОшибка: {e}")
 
 @bot.callback_query_handler(func=lambda c: c.data == "banks")
 def banks(c):
@@ -296,7 +288,6 @@ def banks(c):
 
 @bot.callback_query_handler(func=lambda c: c.data == "bank_nickel")
 def bank_nickel(c):
-    u = get_user(c.from_user.id)
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(
         InlineKeyboardButton("💰 Открыть вклад", callback_data="nickel_open"),
@@ -324,7 +315,7 @@ def bank_sber(c):
         f"Карта: <code>{SBER_CARD}</code>\n"
         f"Получатель: <b>{SBER_NAME}</b>\n\n"
         "Оплата админки рублями - переводишь на эту карту, присылаешь чек, получаешь админку.\n\n"
-        "Цены от <b>69 ₽</b> за Хелпера.",
+        "Цены от <b>69 ₽</b> за Младшего модератора.",
         c.message.chat.id, c.message.message_id, parse_mode="HTML", reply_markup=kb)
     bot.answer_callback_query(c.id)
 
